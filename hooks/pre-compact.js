@@ -207,10 +207,7 @@ RULES:
 `;
 
   const output = {
-    hookSpecificOutput: {
-      hookEventName: 'PreCompact',
-      additionalContext: subagentInstructions.trim()
-    }
+    systemMessage: subagentInstructions.trim()
   };
 
   console.log(JSON.stringify(output));
