@@ -73,16 +73,15 @@ cd claude-memory
 <step-3>
 **Run the install script**
 
-Windows (Git Bash):
+Windows (Git Bash) / Linux / macOS:
 ```bash
 ./install.sh
 ```
 
 This will:
 - Install npm dependencies
-- Copy hooks to ~/.claude/hooks/
-- Update ~/.claude/settings.json with hook configuration
-- Create data directory for LanceDB
+- Configure ~/.claude/settings.json to use hooks from THIS repo location
+- No files are copied - the repo is self-contained
 </step-3>
 
 <step-4>
@@ -132,63 +131,61 @@ cd claude-memory
 npm install
 ```
 
-2. **Copy hooks**
-```bash
-mkdir -p ~/.claude/hooks
-cp hooks/*.js ~/.claude/hooks/
-```
+2. **Update settings.json**
 
-3. **Update settings.json**
+Add hooks to your `~/.claude/settings.json`, pointing to the repo location.
 
-Add this to your `~/.claude/settings.json` (merge with existing config):
+**Windows example** (repo at `C:\Projects\claude-memory`):
 ```json
 {
   "hooks": {
     "SessionStart": [
       {
         "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /path/to/claude-memory/hooks/session-start.js",
-            "timeout": 5000
-          }
-        ]
+        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/session-start.js", "timeout": 5000 }]
       }
     ],
     "UserPromptSubmit": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /path/to/claude-memory/hooks/user-prompt-submit.js",
-            "timeout": 3000
-          }
-        ]
+        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/user-prompt-submit.js", "timeout": 3000 }]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /path/to/claude-memory/hooks/pre-tool-use.js",
-            "timeout": 3000
-          }
-        ]
+        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/pre-tool-use.js", "timeout": 3000 }]
       }
     ]
   }
 }
 ```
 
-Replace `/path/to/claude-memory` with the actual path (use Git Bash style: `/c/Users/...`).
-
-4. **Set environment variable** (optional, for daemon auto-start)
-```bash
-export CLAUDE_DAEMON_DIR=/path/to/claude-memory
+**Linux/macOS example** (repo at `/home/user/claude-memory`):
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/session-start.js", "timeout": 5000 }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/user-prompt-submit.js", "timeout": 3000 }]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
+        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/pre-tool-use.js", "timeout": 3000 }]
+      }
+    ]
+  }
+}
 ```
+
+**Path format:** On Windows, use Git Bash style paths (`/c/...` not `C:\...`).
 </manual-installation>
 
 <usage>
