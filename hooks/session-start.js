@@ -7,11 +7,7 @@ const CONFIG = {
   host: process.env.CLAUDE_DAEMON_HOST || 'localhost',
   port: process.env.CLAUDE_DAEMON_PORT || 8741,
   autoStart: process.env.CLAUDE_DAEMON_AUTOSTART !== 'false',
-  daemonDir: process.env.CLAUDE_DAEMON_DIR || path.join(
-    process.env.HOME || process.env.USERPROFILE,
-    '.claude',
-    'memory-daemon'
-  )
+  daemonDir: process.env.CLAUDE_DAEMON_DIR || path.resolve(__dirname, '..')
 };
 
 function readStdin() {
@@ -91,7 +87,7 @@ async function main() {
     };
     console.log(JSON.stringify(output));
   } else {
-    console.error('[memory] Daemon unavailable. Start it with: cd ~/.claude/memory-daemon && node server.js');
+    console.error(`[memory] Daemon unavailable. Start it with: cd ${CONFIG.daemonDir} && node server.js`);
   }
 }
 
