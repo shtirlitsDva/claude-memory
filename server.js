@@ -25,7 +25,11 @@ async function initDatabase() {
     console.log(`[db] Opened existing table with ~${count} memories`);
   } catch (e) {
     console.log('[db] Creating new memories table...');
-    const initEmbedding = await embeddingService.embed('Memory system initialized');
+
+    // Create with zero vector - no Ollama needed for startup
+    // First real /store call will add proper data
+    const dims = config.embeddingDims || 768;
+    const zeroVector = new Array(dims).fill(0);
 
     table = await db.createTable('memories', [{
       id: 'init_' + Date.now(),
@@ -39,7 +43,7 @@ async function initDatabase() {
       createdAt: new Date().toISOString(),
       lastAccessedAt: new Date().toISOString(),
       accessCount: 0,
-      vector: initEmbedding
+      vector: zeroVector
     }]);
     console.log('[db] Created new memories table');
   }
@@ -53,7 +57,6 @@ async function main() {
     table = t;
   } catch (e) {
     console.error('[db] Failed to initialize database:', e.message);
-    console.error('[db] Make sure Ollama is running with nomic-embed-text model');
     process.exit(1);
   }
 

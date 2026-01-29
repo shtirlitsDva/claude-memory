@@ -74,7 +74,7 @@ HOOKS_CONFIG=$(cat <<EOF
           {
             "type": "command",
             "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
-            "timeout": 5000
+            "timeout": 15000
           }
         ]
       }
