@@ -3,8 +3,8 @@ Claude Code Semantic Memory System
 </header>
 
 A semantic memory system for Claude Code that injects relevant memories mid-workflow via hooks.
-Based on the PreToolUse hook pattern that extracts Claude's thinking blocks, embeds them, and queries
-a vector database for relevant memories - creating a "self-correcting Claude workflow."
+Extracts Claude's thinking blocks, embeds them, and queries a vector database for relevant memories -
+creating a "self-correcting Claude workflow."
 
 <features>
 - **PreToolUse hook** - Injects memories based on Claude's current thinking (mid-workflow correction)
@@ -12,181 +12,80 @@ a vector database for relevant memories - creating a "self-correcting Claude wor
 - **SessionStart hook** - Auto-starts daemon, shows memory count
 - **LanceDB** - Embedded vector database (no server needed)
 - **Ollama** - Local embeddings with nomic-embed-text (8K context, free)
-- **Duplicate detection** - Prevents storing similar memories (0.92 threshold)
 </features>
 
-<architecture>
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         MEMORY DAEMON                                │
-│                      (Node.js HTTP Server)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐ │
-│  │   /store     │  │   /recall    │  │   /health, /stats, /list   │ │
-│  └──────────────┘  └──────────────┘  └────────────────────────────┘ │
-│                              │                                       │
-│                    LanceDB + Ollama Embeddings                       │
-└─────────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ HTTP (localhost:8741)
-┌─────────────────────────────┼───────────────────────────────────────┐
-│                     CLAUDE CODE HOOKS                                │
-│  ┌──────────────────┐  ┌───┴───────────────┐  ┌──────────────────┐  │
-│  │ session-start.js │  │ pre-tool-use.js   │  │user-prompt-sub.js│  │
-│  │  (health check)  │  │ (thinking block)  │  │  (user prompt)   │  │
-│  └──────────────────┘  └───────────────────┘  └──────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-```
-</architecture>
-
 <prerequisites>
-1. **Node.js** 18+ (for daemon)
-2. **Ollama** with nomic-embed-text model
+1. **Node.js** 18+ - https://nodejs.org/
+2. **Ollama** - https://ollama.ai/download
 3. **Claude Code CLI**
 </prerequisites>
 
 <installation>
 <step-1>
-**Install Ollama**
+**Install Ollama and pull the embedding model**
 
-Download from https://ollama.ai/download
+Download Ollama from https://ollama.ai/download
 
-After installation, pull the embedding model:
+Then pull the embedding model:
 ```bash
 ollama pull nomic-embed-text
-```
-
-Verify it works:
-```bash
-curl http://localhost:11434/api/embeddings -d '{"model":"nomic-embed-text","prompt":"test"}'
 ```
 </step-1>
 
 <step-2>
-**Clone this repository**
+**Clone and install**
 
 ```bash
 git clone https://github.com/shtirlitsDva/claude-memory.git
 cd claude-memory
-```
-</step-2>
-
-<step-3>
-**Run the install script**
-
-Windows (Git Bash) / Linux / macOS:
-```bash
 ./install.sh
 ```
 
-This will:
-- Install npm dependencies
-- Configure ~/.claude/settings.json to use hooks from THIS repo location
-- No files are copied - the repo is self-contained
-</step-3>
+This installs to a permanent location:
+- **Windows:** `%APPDATA%\claude-memory`
+- **macOS:** `~/Library/Application Support/claude-memory`
+- **Linux:** `~/.local/share/claude-memory`
 
-<step-4>
+After installation, you can delete the cloned repo.
+</step-2>
+
+<step-3>
 **Start the daemon**
 
 ```bash
+cd "$APPDATA/claude-memory"   # Windows
 npm start
 ```
 
-Or for development with auto-reload:
+Or on Linux/macOS:
 ```bash
-npm run dev
+cd ~/.local/share/claude-memory   # Linux
+cd ~/Library/Application\ Support/claude-memory   # macOS
+npm start
 ```
-</step-4>
+</step-3>
 
-<step-5>
-**Verify installation**
+<step-4>
+**Verify**
 
-```bash
-# Health check
-curl http://localhost:8741/health
-
-# Store a test memory
-curl -X POST http://localhost:8741/store \
-  -H "Content-Type: application/json" \
-  -d '{"type":"GOTCHA","content":"Test memory"}'
-
-# Query it
-curl -X POST http://localhost:8741/recall \
-  -H "Content-Type: application/json" \
-  -d '{"query":"test"}'
-```
-
-Start a new Claude Code session - you should see:
+Start a new Claude Code session. You should see:
 ```
 [Semantic Memory] Active: N memories available
 ```
-</step-5>
+</step-4>
 </installation>
 
-<manual-installation>
-If the install script doesn't work, follow these steps:
-
-1. **Install dependencies**
+<uninstall>
 ```bash
-cd claude-memory
-npm install
+# From the cloned repo directory:
+./uninstall.sh
+
+# Or manually:
+rm -rf "$APPDATA/claude-memory"  # Windows
+rm -rf ~/.local/share/claude-memory  # Linux
+# Then remove "hooks" section from ~/.claude/settings.json
 ```
-
-2. **Update settings.json**
-
-Add hooks to your `~/.claude/settings.json`, pointing to the repo location.
-
-**Windows example** (repo at `C:\Projects\claude-memory`):
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/session-start.js", "timeout": 5000 }]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/user-prompt-submit.js", "timeout": 3000 }]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
-        "hooks": [{ "type": "command", "command": "node /c/Projects/claude-memory/hooks/pre-tool-use.js", "timeout": 3000 }]
-      }
-    ]
-  }
-}
-```
-
-**Linux/macOS example** (repo at `/home/user/claude-memory`):
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/session-start.js", "timeout": 5000 }]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/user-prompt-submit.js", "timeout": 3000 }]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
-        "hooks": [{ "type": "command", "command": "node /home/user/claude-memory/hooks/pre-tool-use.js", "timeout": 3000 }]
-      }
-    ]
-  }
-}
-```
-
-**Path format:** On Windows, use Git Bash style paths (`/c/...` not `C:\...`).
-</manual-installation>
+</uninstall>
 
 <usage>
 <storing-memories>
@@ -196,7 +95,6 @@ curl -X POST http://localhost:8741/store \
   -d '{
     "type": "GOTCHA",
     "content": "Environment variable ~ does not expand in settings.json on Windows",
-    "context": "Windows Git Bash Claude Code",
     "confidence": 0.9
   }'
 ```
@@ -218,77 +116,56 @@ curl -X POST http://localhost:8741/recall \
 ```
 </querying-memories>
 
-<listing-memories>
+<other-endpoints>
 ```bash
-curl http://localhost:8741/list
-curl "http://localhost:8741/list?type=GOTCHA&limit=10"
-```
-</listing-memories>
+# Health check
+curl http://localhost:8741/health
 
-<deleting-memories>
-```bash
+# Statistics
+curl http://localhost:8741/stats
+
+# List all memories
+curl http://localhost:8741/list
+
+# Delete a memory
 curl -X DELETE http://localhost:8741/memory/mem_abc123
 ```
-</deleting-memories>
+</other-endpoints>
 </usage>
 
-<api-reference>
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check, memory count |
-| `/stats` | GET | Statistics by type |
-| `/store` | POST | Store a new memory |
-| `/recall` | POST | Query for relevant memories |
-| `/list` | GET | List all memories |
-| `/memory/:id` | DELETE | Delete a memory |
-</api-reference>
-
 <configuration>
-Edit `config.json`:
+Edit `config.json` in the install directory:
 
 ```json
 {
   "port": 8741,
   "embeddingModel": "nomic-embed-text",
-  "embeddingDims": 768,
-  "ollamaUrl": "http://localhost:11434",
   "minSimilarity": 0.35,
   "maxResults": 3,
-  "duplicateThreshold": 0.92,
-  "timeoutMs": 2500,
-  "maxContentLength": 200
+  "duplicateThreshold": 0.92
 }
 ```
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `port` | 8741 | Daemon HTTP port |
-| `embeddingModel` | nomic-embed-text | Ollama model for embeddings |
-| `minSimilarity` | 0.35 | Minimum similarity for recall |
-| `maxResults` | 3 | Max memories returned per query |
-| `duplicateThreshold` | 0.92 | Threshold for duplicate detection |
 </configuration>
 
 <how-it-works>
-The key innovation is the **PreToolUse hook** that fires before every tool call:
+The **PreToolUse hook** fires before every tool call:
 
 1. Claude decides to use a tool (Read, Grep, Bash, etc.)
-2. PreToolUse hook extracts last 1500 chars from Claude's thinking block
-3. Hook embeds the thinking text via Ollama
-4. Hook queries LanceDB for top 3 relevant memories (≥0.35 similarity)
-5. Memories are injected as XML in `additionalContext`
+2. Hook extracts last 1500 chars from Claude's thinking block
+3. Hook embeds the text via Ollama
+4. Hook queries LanceDB for top 3 relevant memories
+5. Memories injected as XML in `additionalContext`
 6. Claude receives memories BEFORE executing the tool
 7. Claude can self-correct based on injected memories
 
-This solves "workflow drift" - where memories injected at prompt time become irrelevant as Claude's task evolves.
+This solves "workflow drift" - where memories injected at prompt time become
+irrelevant as Claude's task evolves.
 </how-it-works>
 
 <credits>
-Based on:
+Based on research from:
 - [zacdcook/claude-code-semantic-memory](https://github.com/zacdcook/claude-code-semantic-memory)
-- Research on PreToolUse hook semantic memory injection
-- LanceDB for embedded vector storage
-- Ollama for local embeddings
+- PreToolUse hook semantic memory injection pattern
 </credits>
 
 <license>

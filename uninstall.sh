@@ -1,33 +1,44 @@
 #!/bin/bash
 
-CLAUDE_DIR="$HOME/.claude"
-HOOKS_DIR="$CLAUDE_DIR/hooks"
-SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+# Determine install location based on OS
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    INSTALL_DIR="$APPDATA/claude-memory"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    INSTALL_DIR="$HOME/Library/Application Support/claude-memory"
+else
+    INSTALL_DIR="$HOME/.local/share/claude-memory"
+fi
+
+SETTINGS_FILE="$HOME/.claude/settings.json"
 
 echo "=== Claude Code Semantic Memory Uninstaller ==="
 echo ""
 
-echo "[1/3] Removing hooks..."
-rm -f "$HOOKS_DIR/session-start.js"
-rm -f "$HOOKS_DIR/user-prompt-submit.js"
-rm -f "$HOOKS_DIR/pre-tool-use.js"
-echo "  Removed hook files"
+echo "[1/3] Stopping daemon if running..."
+pkill -f "node.*claude-memory.*server.js" 2>/dev/null || true
 
-echo ""
-echo "[2/3] Cleaning up settings.json..."
-echo "  NOTE: You need to manually remove the 'hooks' section from:"
-echo "  $SETTINGS_FILE"
+echo "[2/3] Removing installed files..."
+if [ -d "$INSTALL_DIR" ]; then
+    rm -rf "$INSTALL_DIR"
+    echo "  Removed: $INSTALL_DIR"
+else
+    echo "  Not found: $INSTALL_DIR"
+fi
 
-echo ""
-echo "[3/3] Stopping daemon (if running)..."
-pkill -f "node.*server.js" 2>/dev/null || true
-echo "  Done"
+echo "[3/3] Cleaning settings.json..."
+if [ -f "$SETTINGS_FILE" ]; then
+    if command -v jq &> /dev/null; then
+        jq 'del(.hooks)' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp"
+        mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+        echo "  Removed hooks from settings.json"
+    else
+        echo "  WARNING: jq not found. Please manually remove 'hooks' section from:"
+        echo "  $SETTINGS_FILE"
+    fi
+fi
 
 echo ""
 echo "=== Uninstall Complete ==="
 echo ""
-echo "The daemon directory and data were NOT removed."
-echo "To fully remove, delete this directory manually."
-echo ""
-echo "To remove hooks config, edit $SETTINGS_FILE"
-echo "and remove the 'hooks' section."
+echo "Memory data was stored in: $INSTALL_DIR/data/"
+echo "(Already deleted above)"

@@ -2,33 +2,68 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Determine install location based on OS
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    # Windows: use AppData
+    INSTALL_DIR="$APPDATA/claude-memory"
+    INSTALL_DIR_BASH=$(echo "$INSTALL_DIR" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|')
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS: use Application Support
+    INSTALL_DIR="$HOME/Library/Application Support/claude-memory"
+    INSTALL_DIR_BASH="$INSTALL_DIR"
+else
+    # Linux: use .local/share
+    INSTALL_DIR="$HOME/.local/share/claude-memory"
+    INSTALL_DIR_BASH="$INSTALL_DIR"
+fi
+
 CLAUDE_DIR="$HOME/.claude"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 
 echo "=== Claude Code Semantic Memory Installer ==="
 echo ""
-echo "Repo location: $SCRIPT_DIR"
+echo "Install location: $INSTALL_DIR"
 echo ""
 
-# Convert to Git Bash style path for Windows
-if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-    REPO_PATH=$(echo "$SCRIPT_DIR" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|')
-else
-    REPO_PATH="$SCRIPT_DIR"
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+    echo "ERROR: Node.js is not installed."
+    echo "Please install Node.js from https://nodejs.org/"
+    exit 1
 fi
 
-echo "[1/3] Installing npm dependencies..."
-cd "$SCRIPT_DIR"
-npm install
+# Check for Ollama
+if ! curl -s http://localhost:11434/api/tags &> /dev/null; then
+    echo "WARNING: Ollama is not running or not installed."
+    echo "Please install Ollama from https://ollama.ai/download"
+    echo "Then run: ollama pull nomic-embed-text"
+    echo ""
+fi
 
-echo ""
-echo "[2/3] Creating Claude config directory..."
+echo "[1/4] Creating install directory..."
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/hooks"
+mkdir -p "$INSTALL_DIR/routes"
+mkdir -p "$INSTALL_DIR/services"
+mkdir -p "$INSTALL_DIR/data"
+
+echo "[2/4] Copying files..."
+cp "$SCRIPT_DIR/package.json" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/package-lock.json" "$INSTALL_DIR/" 2>/dev/null || true
+cp "$SCRIPT_DIR/config.json" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/server.js" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/hooks/"*.js "$INSTALL_DIR/hooks/"
+cp "$SCRIPT_DIR/routes/"*.js "$INSTALL_DIR/routes/"
+cp "$SCRIPT_DIR/services/"*.js "$INSTALL_DIR/services/"
+
+echo "[3/4] Installing dependencies..."
+cd "$INSTALL_DIR"
+npm install --production
+
+echo "[4/4] Configuring Claude Code hooks..."
 mkdir -p "$CLAUDE_DIR"
 
-echo ""
-echo "[3/3] Configuring Claude Code hooks..."
-
-# Create hooks configuration pointing to THIS repo
 HOOKS_CONFIG=$(cat <<EOF
 {
   "hooks": {
@@ -38,7 +73,7 @@ HOOKS_CONFIG=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "node $REPO_PATH/hooks/session-start.js",
+            "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
             "timeout": 5000
           }
         ]
@@ -49,7 +84,7 @@ HOOKS_CONFIG=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "node $REPO_PATH/hooks/user-prompt-submit.js",
+            "command": "node $INSTALL_DIR_BASH/hooks/user-prompt-submit.js",
             "timeout": 3000
           }
         ]
@@ -61,7 +96,7 @@ HOOKS_CONFIG=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "node $REPO_PATH/hooks/pre-tool-use.js",
+            "command": "node $INSTALL_DIR_BASH/hooks/pre-tool-use.js",
             "timeout": 3000
           }
         ]
@@ -76,43 +111,42 @@ if [ ! -f "$SETTINGS_FILE" ]; then
     echo "$HOOKS_CONFIG" > "$SETTINGS_FILE"
     echo "  Created new settings.json"
 elif command -v jq &> /dev/null; then
-    echo "  Merging with existing settings.json using jq..."
-    EXISTING=$(cat "$SETTINGS_FILE")
-    echo "$EXISTING" | jq -s ".[0] * $HOOKS_CONFIG" > "$SETTINGS_FILE.tmp"
+    echo "  Merging with existing settings.json..."
+    jq -s '.[0] * .[1]' "$SETTINGS_FILE" <(echo "$HOOKS_CONFIG") > "$SETTINGS_FILE.tmp"
     mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
 else
-    echo "  WARNING: jq not found. Creating backup and adding hooks..."
-    cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%s)"
+    echo "  WARNING: jq not found for JSON merging."
+    echo "  Backing up existing settings.json..."
+    cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup"
 
-    # Simple merge: if file has content, try to insert hooks before last }
     if grep -q '"hooks"' "$SETTINGS_FILE"; then
-        echo "  ERROR: settings.json already has hooks section."
-        echo "  Please manually merge from: $SCRIPT_DIR/settings-hooks.json"
-        echo "$HOOKS_CONFIG" > "$SCRIPT_DIR/settings-hooks.json"
-        exit 1
+        echo "  ERROR: settings.json already has hooks. Please merge manually."
+        echo "$HOOKS_CONFIG" > "$INSTALL_DIR/hooks-config.json"
+        echo "  Hooks config saved to: $INSTALL_DIR/hooks-config.json"
     else
-        # Insert hooks config before the final }
-        sed -i '$ d' "$SETTINGS_FILE"  # Remove last line (closing brace)
-        echo '  ,"hooks": {' >> "$SETTINGS_FILE"
-        echo "$HOOKS_CONFIG" | grep -A 100 '"hooks":' | tail -n +2 | head -n -1 >> "$SETTINGS_FILE"
-        echo '}' >> "$SETTINGS_FILE"
+        # Try to insert hooks before final brace
+        node -e "
+          const fs = require('fs');
+          const existing = JSON.parse(fs.readFileSync('$SETTINGS_FILE', 'utf8'));
+          const hooks = $HOOKS_CONFIG;
+          Object.assign(existing, hooks);
+          fs.writeFileSync('$SETTINGS_FILE', JSON.stringify(existing, null, 2));
+        " && echo "  Merged successfully" || echo "  ERROR: Failed to merge. Please merge manually."
     fi
 fi
 
 echo ""
 echo "=== Installation Complete ==="
 echo ""
-echo "Hooks configured to run from: $REPO_PATH"
+echo "Installed to: $INSTALL_DIR"
 echo ""
-echo "Next steps:"
+echo "You can now delete this git repo if you want."
 echo ""
-echo "1. Install Ollama (if not installed):"
-echo "   Download from https://ollama.ai/download"
-echo "   Then run: ollama pull nomic-embed-text"
+echo "To start the daemon:"
+echo "  cd \"$INSTALL_DIR\" && npm start"
 echo ""
-echo "2. Start the daemon:"
-echo "   cd \"$SCRIPT_DIR\""
-echo "   npm start"
+echo "Or create a shortcut/alias:"
+echo "  alias claude-memory='node \"$INSTALL_DIR/server.js\"'"
 echo ""
-echo "3. Start a new Claude Code session"
-echo "   You should see: [Semantic Memory] Active"
+echo "Make sure Ollama is running with nomic-embed-text model:"
+echo "  ollama pull nomic-embed-text"
