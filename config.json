@@ -6,7 +6,7 @@
   "minSimilarity": 0.35,
   "maxResults": 3,
   "duplicateThreshold": 0.92,
-  "timeoutMs": 2500,
+  "timeoutMs": 10000,
   "maxContentLength": 200,
   "autoStart": true
 }
