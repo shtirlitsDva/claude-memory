@@ -4,7 +4,7 @@ module.exports = async function listRoute(req, res) {
   const { type, limit = 20, offset = 0 } = req.query;
 
   try {
-    let allMemories = await table.search([0]).limit(10000).toArray();
+    let allMemories = await table.query().limit(10000).toArray();
 
     if (type) {
       allMemories = allMemories.filter(m => m.type === type);

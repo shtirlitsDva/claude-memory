@@ -2,7 +2,7 @@ module.exports = async function statsRoute(req, res) {
   const { table } = req.app.locals;
 
   try {
-    const allMemories = await table.search([0]).limit(10000).toArray();
+    const allMemories = await table.query().limit(10000).toArray();
 
     const byType = {};
     let totalConfidence = 0;

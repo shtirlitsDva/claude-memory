@@ -17,12 +17,13 @@ function cosineSimilarity(a, b) {
 
 async function findDuplicates(table, embedding, threshold) {
   try {
-    const results = await table.search(embedding).limit(5).toArray();
+    const results = await table.vectorSearch(embedding).column('vector').distanceType('cosine').limit(5).toArray();
 
     for (const result of results) {
-      const sim = cosineSimilarity(embedding, result.vector);
-      if (sim >= threshold) {
-        return { isDuplicate: true, existingId: result.id, similarity: sim };
+      if (result.type === 'SYSTEM') continue;
+      const similarity = 1 - (result._distance || 0);
+      if (similarity >= threshold) {
+        return { isDuplicate: true, existingId: result.id, similarity };
       }
     }
   } catch (e) {
@@ -34,13 +35,14 @@ async function findDuplicates(table, embedding, threshold) {
 
 async function searchMemories(table, embedding, minSimilarity, maxResults, filters = {}) {
   try {
-    const results = await table.search(embedding).limit(maxResults * 3).toArray();
+    const results = await table.vectorSearch(embedding).column('vector').distanceType('cosine').limit(maxResults * 3).toArray();
 
     return results
-      .map(r => ({
-        ...r,
-        similarity: cosineSimilarity(embedding, r.vector)
-      }))
+      .map(r => {
+        const similarity = 1 - (r._distance || 0);
+        return { ...r, similarity };
+      })
+      .filter(r => r.type !== 'SYSTEM')
       .filter(r => r.similarity >= minSimilarity)
       .filter(r => {
         if (filters.types && filters.types.length > 0 && !filters.types.includes(r.type)) return false;
@@ -57,8 +59,8 @@ async function searchMemories(table, embedding, minSimilarity, maxResults, filte
 
 async function countRows(table) {
   try {
-    const all = await table.search([0]).limit(10000).toArray();
-    return all.length;
+    const all = await table.countRows();
+    return all;
   } catch {
     return 0;
   }

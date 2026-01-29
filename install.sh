@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     # Windows: use AppData
     INSTALL_DIR="$APPDATA/claude-memory"
-    INSTALL_DIR_BASH=$(echo "$INSTALL_DIR" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|')
+    INSTALL_DIR_BASH=$(echo "$INSTALL_DIR" | sed 's|\\|/|g')
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS: use Application Support
     INSTALL_DIR="$HOME/Library/Application Support/claude-memory"
@@ -47,6 +47,8 @@ mkdir -p "$INSTALL_DIR/hooks"
 mkdir -p "$INSTALL_DIR/routes"
 mkdir -p "$INSTALL_DIR/services"
 mkdir -p "$INSTALL_DIR/data"
+mkdir -p "$INSTALL_DIR/scripts"
+mkdir -p "$INSTALL_DIR/prompts"
 
 echo "[2/4] Copying files..."
 cp "$SCRIPT_DIR/package.json" "$INSTALL_DIR/"
@@ -56,6 +58,8 @@ cp "$SCRIPT_DIR/server.js" "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/hooks/"*.js "$INSTALL_DIR/hooks/"
 cp "$SCRIPT_DIR/routes/"*.js "$INSTALL_DIR/routes/"
 cp "$SCRIPT_DIR/services/"*.js "$INSTALL_DIR/services/"
+cp "$SCRIPT_DIR/scripts/"*.js "$INSTALL_DIR/scripts/" 2>/dev/null || true
+cp "$SCRIPT_DIR/prompts/"*.md "$INSTALL_DIR/prompts/" 2>/dev/null || true
 
 echo "[3/4] Installing dependencies..."
 cd "$INSTALL_DIR"
@@ -69,24 +73,47 @@ HOOKS_CONFIG=$(cat <<EOF
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
-        "timeout": 15000
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
+            "timeout": 15000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "node $INSTALL_DIR_BASH/hooks/user-prompt-submit.js",
-        "timeout": 3000
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $INSTALL_DIR_BASH/hooks/user-prompt-submit.js",
+            "timeout": 3000
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
-        "type": "command",
-        "command": "node $INSTALL_DIR_BASH/hooks/pre-tool-use.js",
-        "timeout": 3000
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $INSTALL_DIR_BASH/hooks/pre-tool-use.js",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $INSTALL_DIR_BASH/hooks/pre-compact.js",
+            "timeout": 30000
+          }
+        ]
       }
     ]
   }
