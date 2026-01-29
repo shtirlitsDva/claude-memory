@@ -168,49 +168,12 @@ async function main() {
     status: 'pending_extraction'
   };
   fs.writeFileSync(path.join(sessionDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
+
+  const latestPath = path.join(CONFIG.transcriptsDir, 'latest.json');
+  fs.writeFileSync(latestPath, JSON.stringify(metadata, null, 2));
   console.error('[pre-compact] ✓ Wrote metadata');
 
-  const subagentInstructions = `
-<pre-compact-extraction-required>
-Session transcript has been exported and needs learning extraction.
-
-TRANSCRIPT PATH: ${mdPath}
-SESSION ID: ${sessionId}
-DAEMON URL: ${DAEMON_URL}
-
-Dispatch a sub-agent using the Task tool with this prompt:
-
----
-Read the transcript at ${mdPath} and extract learnings to store in the semantic memory database.
-
-For each learning you find, store it by running:
-curl -X POST ${DAEMON_URL}/store -H "Content-Type: application/json" -d '{"type": "<TYPE>", "content": "<LEARNING>", "context": "<CONTEXT>", "confidence": <SCORE>, "sessionSource": "${sessionId}"}'
-
-LEARNING TYPES:
-- WORKING_SOLUTION: Commands, code, or approaches that worked
-- GOTCHA: Traps, counterintuitive behaviors, "watch out for this"
-- PATTERN: Recurring architectural decisions or workflows
-- DECISION: Explicit design choices with reasoning
-- FAILURE: What didn't work and why
-- PREFERENCE: User's stated preferences
-
-RULES:
-- Be specific - include actual commands, paths, error messages
-- Confidence 0.95+ for explicitly confirmed, 0.85+ for strong evidence
-- Skip generic programming knowledge Claude already knows
-- Skip incomplete thoughts and debugging noise
-- Focus on user-specific infrastructure, preferences, workflows
-- Keep content under 200 characters, use context for details
----
-
-</pre-compact-extraction-required>
-`;
-
-  const output = {
-    systemMessage: subagentInstructions.trim()
-  };
-
-  console.log(JSON.stringify(output));
+  console.log(JSON.stringify({ suppressOutput: true }));
 }
 
 main().catch(e => {
