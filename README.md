@@ -35,11 +35,22 @@ ollama pull nomic-embed-text
 <step-2>
 **Clone and install**
 
+**Windows (Git Bash):**
 ```bash
 git clone https://github.com/shtirlitsDva/claude-memory.git
 cd claude-memory
 ./install.sh
 ```
+
+**Linux / macOS (Terminal):**
+```bash
+git clone https://github.com/shtirlitsDva/claude-memory.git
+cd claude-memory
+chmod +x install.sh
+./install.sh
+```
+
+> **Note:** On Windows, use Git Bash (comes with Git for Windows), not PowerShell or CMD.
 
 This installs to a permanent location:
 - **Windows:** `%APPDATA%\claude-memory`
@@ -52,15 +63,21 @@ After installation, you can delete the cloned repo.
 <step-3>
 **Start the daemon**
 
+**Windows (Git Bash or CMD/PowerShell):**
 ```bash
-cd "$APPDATA/claude-memory"   # Windows
+cd "%APPDATA%\claude-memory"
 npm start
 ```
 
-Or on Linux/macOS:
+**Linux:**
 ```bash
-cd ~/.local/share/claude-memory   # Linux
-cd ~/Library/Application\ Support/claude-memory   # macOS
+cd ~/.local/share/claude-memory
+npm start
+```
+
+**macOS:**
+```bash
+cd ~/Library/Application\ Support/claude-memory
 npm start
 ```
 </step-3>
