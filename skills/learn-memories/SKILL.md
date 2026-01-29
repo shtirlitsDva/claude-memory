@@ -2,6 +2,7 @@
 name: learn-memories
 description: Extract learnings from session transcripts and store in semantic memory database
 disable-model-invocation: true
+allowed-tools: Bash(curl *), Read
 ---
 
 Extract learnings from the most recent session transcript and store them in the semantic memory database.
