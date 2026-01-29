@@ -172,42 +172,10 @@ async function main() {
   const latestPath = path.join(CONFIG.transcriptsDir, 'latest.json');
   fs.writeFileSync(latestPath, JSON.stringify(metadata, null, 2));
   console.error('[pre-compact] ✓ Wrote metadata');
+  console.error(`[pre-compact] Transcript exported to: ${mdPath}`);
+  console.error('[pre-compact] Run /learn-memories to extract learnings');
 
-  const instructions = `
-<pre-compact-extraction-required>
-Session transcript has been exported and needs learning extraction.
-
-TRANSCRIPT PATH: ${mdPath}
-SESSION ID: ${sessionId}
-DAEMON URL: ${DAEMON_URL}
-
-Dispatch a sub-agent using the Task tool with this prompt:
-
----
-Read the transcript at ${mdPath} and extract learnings to store in the semantic memory database.
-
-For each learning you find, store it by running:
-curl -X POST ${DAEMON_URL}/store -H "Content-Type: application/json" -d '{"type": "<TYPE>", "content": "<LEARNING>", "context": "<CONTEXT>", "confidence": <SCORE>, "sessionSource": "${sessionId}"}'
-
-LEARNING TYPES:
-- WORKING_SOLUTION: Commands, code, or approaches that worked
-- GOTCHA: Traps, counterintuitive behaviors, "watch out for this"
-- PATTERN: Recurring architectural decisions or workflows
-- DECISION: Explicit design choices with reasoning
-- FAILURE: What didn't work and why
-- PREFERENCE: User's stated preferences
-
-RULES:
-- Be specific - include actual commands, paths, error messages
-- Confidence 0.95+ for explicitly confirmed, 0.85+ for strong evidence
-- Skip generic programming knowledge Claude already knows
-- Focus on user-specific infrastructure, preferences, workflows
----
-
-</pre-compact-extraction-required>
-`;
-
-  console.log(instructions);
+  console.log(JSON.stringify({ suppressOutput: true }));
 }
 
 main().catch(e => {
