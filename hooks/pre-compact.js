@@ -101,27 +101,29 @@ function parseTranscript(jsonlPath) {
 function toMarkdown(parsed, sessionId) {
   const { messages, projectPath } = parsed;
 
-  let md = `# Session Transcript\n\n`;
-  md += `**Session ID**: ${sessionId}\n`;
-  md += `**Project**: ${projectPath}\n`;
-  md += `**Exported**: ${new Date().toISOString()}\n\n`;
-  md += `---\n\n`;
+  let md = `<session-transcript>\n`;
+  md += `<metadata>\n`;
+  md += `session-id: ${sessionId}\n`;
+  md += `project: ${projectPath}\n`;
+  md += `exported: ${new Date().toISOString()}\n`;
+  md += `</metadata>\n\n`;
 
   for (const msg of messages) {
     if (msg.role === 'user') {
-      md += `## User\n\n${msg.content}\n\n`;
+      md += `<user>\n${msg.content}\n</user>\n\n`;
     } else if (msg.role === 'assistant') {
-      md += `## Assistant\n\n`;
+      md += `<assistant>\n`;
       if (msg.thinking) {
-        md += `<thinking>\n${msg.thinking}\n</thinking>\n\n`;
+        md += `<thinking>\n${msg.thinking}\n</thinking>\n`;
       }
       if (msg.content) {
-        md += `${msg.content}\n\n`;
+        md += `<response>\n${msg.content}\n</response>\n`;
       }
+      md += `</assistant>\n\n`;
     }
-    md += `---\n\n`;
   }
 
+  md += `</session-transcript>\n`;
   return md;
 }
 

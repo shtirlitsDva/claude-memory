@@ -110,30 +110,32 @@ function parseTranscript(filePath) {
 function toMarkdown(parsed) {
   const { messages, sessionId, projectPath, sourcePath } = parsed;
 
-  let md = `# Session Transcript\n\n`;
-  md += `**Session ID**: ${sessionId || 'Unknown'}\n`;
-  md += `**Project**: ${projectPath || 'Unknown'}\n`;
-  md += `**Source**: ${sourcePath}\n`;
-  md += `**Converted**: ${new Date().toISOString()}\n\n`;
-  md += `---\n\n`;
+  let md = `<session-transcript>\n`;
+  md += `<metadata>\n`;
+  md += `session-id: ${sessionId || 'Unknown'}\n`;
+  md += `project: ${projectPath || 'Unknown'}\n`;
+  md += `source: ${sourcePath}\n`;
+  md += `converted: ${new Date().toISOString()}\n`;
+  md += `</metadata>\n\n`;
 
   for (const msg of messages) {
     if (msg.role === 'user') {
-      md += `## User\n\n${msg.content}\n\n`;
+      md += `<user>\n${msg.content}\n</user>\n\n`;
     } else if (msg.role === 'assistant') {
-      md += `## Assistant\n\n`;
+      md += `<assistant>\n`;
       if (msg.thinking) {
-        md += `<details>\n<summary>Thinking</summary>\n\n${msg.thinking}\n\n</details>\n\n`;
+        md += `<thinking>\n${msg.thinking}\n</thinking>\n`;
       }
       if (msg.content) {
-        md += `${msg.content}\n\n`;
+        md += `<response>\n${msg.content}\n</response>\n`;
       }
+      md += `</assistant>\n\n`;
     } else if (msg.role === 'system') {
-      md += `## System\n\n${msg.content}\n\n`;
+      md += `<system>\n${msg.content}\n</system>\n\n`;
     }
-    md += `---\n\n`;
   }
 
+  md += `</session-transcript>\n`;
   return md;
 }
 
