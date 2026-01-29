@@ -1,0 +1,12 @@
+{
+  "port": 8741,
+  "embeddingModel": "nomic-embed-text",
+  "embeddingDims": 768,
+  "ollamaUrl": "http://localhost:11434",
+  "minSimilarity": 0.35,
+  "maxResults": 3,
+  "duplicateThreshold": 0.92,
+  "timeoutMs": 2500,
+  "maxContentLength": 200,
+  "autoStart": true
+}

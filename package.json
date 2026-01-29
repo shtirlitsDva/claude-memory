@@ -1,0 +1,35 @@
+{
+  "name": "claude-memory",
+  "version": "1.0.0",
+  "description": "Semantic memory system for Claude Code with PreToolUse hook injection",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shtirlitsDva/claude-memory.git"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "semantic-memory",
+    "hooks",
+    "lancedb",
+    "embeddings",
+    "ollama"
+  ],
+  "author": "shtirlitsDva",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shtirlitsDva/claude-memory/issues"
+  },
+  "homepage": "https://github.com/shtirlitsDva/claude-memory#readme",
+  "dependencies": {
+    "@lancedb/lancedb": "^0.4.0",
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  }
+}
