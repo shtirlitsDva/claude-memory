@@ -65,6 +65,10 @@ cp "$SCRIPT_DIR/prompts/"*.md "$INSTALL_DIR/prompts/" 2>/dev/null || true
 mkdir -p "$CLAUDE_DIR/skills/learn-memories"
 cp -r "$SCRIPT_DIR/skills/learn-memories/"* "$CLAUDE_DIR/skills/learn-memories/" 2>/dev/null || true
 
+# Install agents to user's Claude agents directory
+mkdir -p "$CLAUDE_DIR/agents"
+cp "$SCRIPT_DIR/agents/"*.md "$CLAUDE_DIR/agents/" 2>/dev/null || true
+
 echo "[3/4] Installing dependencies..."
 cd "$INSTALL_DIR"
 npm install --production
