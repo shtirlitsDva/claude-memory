@@ -69,37 +69,24 @@ HOOKS_CONFIG=$(cat <<EOF
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
-            "timeout": 15000
-          }
-        ]
+        "type": "command",
+        "command": "node $INSTALL_DIR_BASH/hooks/session-start.js",
+        "timeout": 15000
       }
     ],
     "UserPromptSubmit": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $INSTALL_DIR_BASH/hooks/user-prompt-submit.js",
-            "timeout": 3000
-          }
-        ]
+        "type": "command",
+        "command": "node $INSTALL_DIR_BASH/hooks/user-prompt-submit.js",
+        "timeout": 3000
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Read|Grep|Glob|Task|WebSearch|WebFetch|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $INSTALL_DIR_BASH/hooks/pre-tool-use.js",
-            "timeout": 3000
-          }
-        ]
+        "type": "command",
+        "command": "node $INSTALL_DIR_BASH/hooks/pre-tool-use.js",
+        "timeout": 3000
       }
     ]
   }
