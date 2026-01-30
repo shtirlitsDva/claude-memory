@@ -1,5 +1,5 @@
 ---
-name: learn-memories
+name: memories-learn
 description: Extract learnings from session transcripts and store in semantic memory database
 disable-model-invocation: true
 context: fork

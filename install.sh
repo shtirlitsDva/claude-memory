@@ -62,8 +62,12 @@ cp "$SCRIPT_DIR/scripts/"*.js "$INSTALL_DIR/scripts/" 2>/dev/null || true
 cp "$SCRIPT_DIR/prompts/"*.md "$INSTALL_DIR/prompts/" 2>/dev/null || true
 
 # Install skills to user's Claude skills directory
-mkdir -p "$CLAUDE_DIR/skills/learn-memories"
-cp -r "$SCRIPT_DIR/skills/learn-memories/"* "$CLAUDE_DIR/skills/learn-memories/" 2>/dev/null || true
+mkdir -p "$CLAUDE_DIR/skills/memories-learn"
+mkdir -p "$CLAUDE_DIR/skills/memories-sanitize"
+cp -r "$SCRIPT_DIR/skills/memories-learn/"* "$CLAUDE_DIR/skills/memories-learn/" 2>/dev/null || true
+cp -r "$SCRIPT_DIR/skills/memories-sanitize/"* "$CLAUDE_DIR/skills/memories-sanitize/" 2>/dev/null || true
+# Clean up old skill name if exists
+rm -rf "$CLAUDE_DIR/skills/learn-memories" 2>/dev/null || true
 
 # Install agents to user's Claude agents directory
 mkdir -p "$CLAUDE_DIR/agents"
