@@ -90,9 +90,10 @@ PreToolUse triggers for: `Read`, `Grep`, `Glob`, `Task`, `WebSearch`, `WebFetch`
 
 **Extract learnings from your session:**
 ```
-/memories-learn
+/compact           # First: exports transcript via PreCompact hook
+/memories-learn    # Then: extracts learnings from the exported transcript
 ```
-Reads the transcript exported by PreCompact and stores valuable learnings.
+The `/memories-learn` skill reads the transcript that was exported by the PreCompact hook when you ran `/compact`. Run these in sequence after a productive session.
 
 **Clean up invalid memories:**
 ```
