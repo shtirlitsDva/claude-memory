@@ -5,3 +5,7 @@ data/
 Thumbs.db
 *.log
 .env
+
+# User data
+converted-transcripts/
+extracted-learnings.jsonl
