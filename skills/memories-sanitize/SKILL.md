@@ -1,6 +1,9 @@
 ---
 name: memories-sanitize
 description: Review recent memories and remove invalid or misleading ones from the semantic memory database
+disable-model-invocation: true
+context: fork
+allowed-tools: Read, Bash(curl *)
 ---
 
 # Memory Sanitization Procedure
