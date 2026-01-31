@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Memory Browser</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --surface-hover: #1f3460;
+      --primary: #0f3460;
+      --accent: #e94560;
+      --text: #eaeaea;
+      --text-muted: #a0a0a0;
+      --border: #2a2a4a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { font-size: 1.8rem; color: var(--accent); }
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .stats span { background: var(--surface); padding: 8px 14px; border-radius: 6px; }
+    .stats strong { color: var(--accent); }
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 12px 16px;
+      padding-left: 44px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .search-box::before {
+      content: "search";
+      font-family: 'Material Icons', sans-serif;
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+    .search-box input:focus { outline: none; border-color: var(--accent); }
+    select, button {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    select:hover, button:hover { background: var(--surface-hover); }
+    button.active, .type-filter.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .type-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .type-filter {
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .type-filter:hover { background: var(--surface-hover); }
+    .type-filter.active { background: var(--accent); border-color: var(--accent); }
+    .type-filter .count {
+      background: rgba(255,255,255,0.15);
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      font-size: 0.8rem;
+    }
+    .memories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 16px;
+    }
+    .memory-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: all 0.2s;
+    }
+    .memory-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .memory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .memory-type {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .type-GOTCHA { background: #ff6b6b33; color: #ff6b6b; }
+    .type-WORKING_SOLUTION { background: #51cf6633; color: #51cf66; }
+    .type-PATTERN { background: #748ffc33; color: #748ffc; }
+    .type-DECISION { background: #ffd43b33; color: #ffd43b; }
+    .type-FAILURE { background: #ff922b33; color: #ff922b; }
+    .type-PREFERENCE { background: #cc5de833; color: #cc5de8; }
+    .type-SYSTEM { background: #868e9633; color: #868e96; }
+    .memory-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .confidence {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .confidence-bar {
+      width: 50px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .memory-content {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .memory-context {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .memory-id {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      margin-top: 8px;
+    }
+    .delete-btn {
+      background: #ff6b6b22;
+      border: 1px solid #ff6b6b44;
+      color: #ff6b6b;
+      cursor: pointer;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+    }
+    .delete-btn:hover { background: #ff6b6b44; color: #ff8888; }
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-muted);
+    }
+    .error {
+      background: #ff6b6b22;
+      border: 1px solid #ff6b6b;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .no-results {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+    }
+    .actions { display: flex; gap: 10px; }
+    @media (max-width: 600px) {
+      .memories-grid { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Claude Memory Browser</h1>
+      <div class="stats" id="stats"></div>
+    </header>
+
+    <div class="controls">
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Search memories...">
+      </div>
+      <select id="sort">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+        <option value="confidence-high">Highest Confidence</option>
+        <option value="confidence-low">Lowest Confidence</option>
+        <option value="type">By Type</option>
+      </select>
+      <div class="actions">
+        <button id="refresh">Refresh</button>
+        <button id="export">Export JSON</button>
+      </div>
+    </div>
+
+    <div class="type-filters" id="type-filters"></div>
+
+    <div class="memories-grid" id="memories-grid">
+      <div class="loading">Loading memories...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8741';
+    let allMemories = [];
+    let activeTypes = new Set();
+
+    async function fetchMemories() {
+      try {
+        const response = await fetch(`${API_BASE}/list?limit=10000`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        allMemories = data.memories || [];
+        return allMemories;
+      } catch (error) {
+        console.error('Error fetching memories:', error);
+        throw error;
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const response = await fetch(`${API_BASE}/stats`);
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        return null;
+      }
+    }
+
+    async function deleteMemory(id) {
+      if (!confirm('Delete this memory?')) return;
+      try {
+        const response = await fetch(`${API_BASE}/memory/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+          allMemories = allMemories.filter(m => m.id !== id);
+          renderMemories();
+          updateStats();
+        }
+      } catch (error) {
+        alert('Failed to delete memory');
+      }
+    }
+
+    function renderStats(stats) {
+      const statsEl = document.getElementById('stats');
+      if (!stats) {
+        statsEl.innerHTML = '<span>Unable to load stats</span>';
+        return;
+      }
+      statsEl.innerHTML = `
+        <span>Total: <strong>${stats.total}</strong></span>
+        <span>Avg Confidence: <strong>${(stats.avgConfidence * 100).toFixed(0)}%</strong></span>
+      `;
+    }
+
+    function renderTypeFilters() {
+      const counts = {};
+      allMemories.forEach(m => {
+        counts[m.type] = (counts[m.type] || 0) + 1;
+      });
+
+      const filtersEl = document.getElementById('type-filters');
+      const types = Object.keys(counts).sort();
+
+      filtersEl.innerHTML = `
+        <div class="type-filter ${activeTypes.size === 0 ? 'active' : ''}" data-type="all">
+          All <span class="count">${allMemories.length}</span>
+        </div>
+        ${types.map(type => `
+          <div class="type-filter ${activeTypes.has(type) ? 'active' : ''}" data-type="${type}">
+            ${type.replace('_', ' ')} <span class="count">${counts[type]}</span>
+          </div>
+        `).join('')}
+      `;
+
+      filtersEl.querySelectorAll('.type-filter').forEach(el => {
+        el.addEventListener('click', () => {
+          const type = el.dataset.type;
+          if (type === 'all') {
+            activeTypes.clear();
+          } else if (activeTypes.has(type)) {
+            activeTypes.delete(type);
+          } else {
+            activeTypes.add(type);
+          }
+          renderTypeFilters();
+          renderMemories();
+        });
+      });
+    }
+
+    function getFilteredMemories() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const sort = document.getElementById('sort').value;
+
+      let filtered = allMemories.filter(m => {
+        if (activeTypes.size > 0 && !activeTypes.has(m.type)) return false;
+        if (search) {
+          const searchable = `${m.content} ${m.context || ''} ${m.type}`.toLowerCase();
+          if (!searchable.includes(search)) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        switch (sort) {
+          case 'newest':
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          case 'oldest':
+            return new Date(a.createdAt) - new Date(b.createdAt);
+          case 'confidence-high':
+            return b.confidence - a.confidence;
+          case 'confidence-low':
+            return a.confidence - b.confidence;
+          case 'type':
+            return a.type.localeCompare(b.type);
+          default:
+            return 0;
+        }
+      });
+
+      return filtered;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderMemories() {
+      const grid = document.getElementById('memories-grid');
+      const filtered = getFilteredMemories();
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="no-results">No memories found matching your criteria</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(m => `
+        <div class="memory-card">
+          <div class="memory-header">
+            <span class="memory-type type-${m.type}">${m.type.replace('_', ' ')}</span>
+            <div class="memory-meta">
+              <div class="confidence">
+                <span>${(m.confidence * 100).toFixed(0)}%</span>
+                <div class="confidence-bar">
+                  <div class="confidence-fill" style="width: ${m.confidence * 100}%"></div>
+                </div>
+              </div>
+              <button class="delete-btn" onclick="deleteMemory('${m.id}')">Delete</button>
+            </div>
+          </div>
+          <div class="memory-content">${escapeHtml(m.content)}</div>
+          ${m.context ? `<div class="memory-context">${escapeHtml(m.context)}</div>` : ''}
+          <div class="memory-id">${m.id} | ${formatDate(m.createdAt)}</div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function updateStats() {
+      const stats = await fetchStats();
+      renderStats(stats);
+    }
+
+    function exportMemories() {
+      const filtered = getFilteredMemories();
+      const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `memories-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function init() {
+      const grid = document.getElementById('memories-grid');
+
+      try {
+        await fetchMemories();
+        await updateStats();
+        renderTypeFilters();
+        renderMemories();
+      } catch (error) {
+        grid.innerHTML = `
+          <div class="error">
+            <h3>Cannot connect to memory daemon</h3>
+            <p>Make sure the daemon is running at ${API_BASE}</p>
+            <p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted)">
+              Start with: cd claude-memory && npm start
+            </p>
+          </div>
+        `;
+      }
+
+      document.getElementById('search').addEventListener('input', renderMemories);
+      document.getElementById('sort').addEventListener('change', renderMemories);
+      document.getElementById('refresh').addEventListener('click', async () => {
+        grid.innerHTML = '<div class="loading">Refreshing...</div>';
+        await fetchMemories();
+        await updateStats();
+        renderTypeFilters();
+        renderMemories();
+      });
+      document.getElementById('export').addEventListener('click', exportMemories);
+    }
+
+    init();
+  </script>
+</body>
+</html>
